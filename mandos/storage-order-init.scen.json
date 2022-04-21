@@ -1,0 +1,90 @@
+{
+    "name": "storage order",
+    "comment": "init contract and check state",
+    "gasSchedule": "v4",
+    "steps": [
+        {
+            "step": "setState",
+            "accounts": {
+                "address:owner": {
+                    "nonce": "0",
+                    "balance": "10,000,000",
+                    "storage": {}
+                },
+                "address:firstNode": {
+                    "nonce": "0",
+                    "balance": "1,000,000",
+                    "storage": {}
+                },
+                "address:secondNode": {
+                    "nonce": "0",
+                    "balance": "1,000,000",
+                    "storage": {}
+                }
+            },
+            "newAddresses": [
+                {
+                    "creatorAddress": "address:owner",
+                    "creatorNonce": "0",
+                    "newAddress": "sc:storage-order"
+                }
+            ]
+        },
+        {
+            "step": "scDeploy",
+            "txId": "deploy",
+            "tx": {
+                "from": "address:owner",
+                "contractCode": "file:../output/storage-order.wasm",
+                "value": "0",
+                "arguments": [
+                    "str:YAOZ-123456",
+                    "sc:storage-order"
+                ],
+                "gasLimit": "10,000,000",
+                "gasPrice": "0"
+            },
+            "expect": {
+                "status": "0",
+                "gas": "*",
+                "refund": "*"
+            }
+        },
+        {
+            "step": "checkState",
+            "accounts": {
+                "address:owner": {
+                    "nonce": "1",
+                    "balance": "10,000,000",
+                    "storage": {}
+                },
+                "address:firstNode": {
+                    "nonce": "0",
+                    "balance": "1,000,000",
+                    "storage": {}
+                },
+                "address:secondNode": {
+                    "nonce": "0",
+                    "balance": "1,000,000",
+                    "storage": {}
+                },
+                "sc:storage-order": {
+                    "nonce": "0",
+                    "balance": "0",
+                    "storage": {
+                        "str:supportedTokens.info":"u32:2|u32:1|u32:2|u32:2",
+                        "str:supportedTokens.node_id|nested:str:EGLD":"u8:1",
+                        "str:supportedTokens.node_id|nested:str:YAOZ-123456":"u8:2",
+                        "str:supportedTokens.node_links|u32:1":"u32:0|u32:2",
+                        "str:supportedTokens.node_links|u32:2":"u32:1|u32:0",
+                        "str:supportedTokens.value|u32:1":"str:EGLD",
+                        "str:supportedTokens.value|u32:2":"str:YAOZ-123456",
+                        "str:cruTokenId":"str:YAOZ-123456",
+                        "str:routerContractAddress":"sc:storage-order"
+                    },
+                    "code": "file:../output/storage-order.wasm"
+                }
+            }
+        }
+    ]
+}
