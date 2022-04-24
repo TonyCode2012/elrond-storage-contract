@@ -3,6 +3,30 @@
 elrond_wasm::imports!();
 elrond_wasm::derive_imports!();
 
+mod router {
+    elrond_wasm::imports!();
+
+    #[elrond_wasm::proxy]
+    pub trait Router {
+        #[view(getPair)]
+        fn get_pair(
+            &self,
+            first_token_id: TokenIdentifier,
+            second_token_id: TokenIdentifier,
+        ) -> ManagedAddress;
+    }
+}
+
+mod pair {
+    elrond_wasm::imports!();
+
+    #[elrond_wasm::proxy]
+    pub trait Pair {
+        #[view(getAmountIn)]
+        fn get_amount_in_view(&self, token_wanted: TokenIdentifier, amount_wanted: BigUint) -> BigUint;
+    }
+}
+
 use router::ProxyTrait as _;
 use pair::ProxyTrait as _;
 
@@ -27,11 +51,14 @@ pub trait StorageOrder {
     fn init(
         &self,
         cru_token_id: &TokenIdentifier,
+        wegld_token_id: &TokenIdentifier,
         router_contract_address: &ManagedAddress,
     ) {
         self.router_contract_address().set(router_contract_address);
         self.cru_token_id().set(cru_token_id);
+        self.wegld_token_id().set(wegld_token_id);
         self.supported_tokens().insert(TokenIdentifier::egld());
+        self.supported_tokens().insert(wegld_token_id.clone());
         self.supported_tokens().insert(cru_token_id.clone());
     }
 
@@ -110,12 +137,18 @@ pub trait StorageOrder {
         Ok(())
     }
 
-    #[endpoint(getPrice)]
+    #[view(getPrice)]
     fn get_price(
         &self,
         token_id: TokenIdentifier,
         size: u64,
     ) -> BigUint {
+        require!(
+            !self.base_price().is_empty()
+            && !self.byte_price().is_empty()
+            && !self.chain_state_price().is_empty(),
+            "Order price has not been set"
+        );
         let price_in_cru = 
             self.base_price().get()
             + self.byte_price().get().mul(size)
@@ -125,13 +158,11 @@ pub trait StorageOrder {
         if token_id == cru_token_id.clone() {
             price_in_cru
         } else {
-            let router_address = self.router_contract_address().get();
-            let pair_address = self.router_contract_proxy(router_address)
-                .get_pair(token_id, cru_token_id.clone())
-                .execute_on_dest_context();
-            self.pair_contract_proxy(pair_address)
-                .get_amount_in_view(cru_token_id.clone(), price_in_cru)
-                .execute_on_dest_context()
+            if token_id == TokenIdentifier::egld() {
+                self.get_price_in_token(self.wegld_token_id().get(), price_in_cru)
+            } else {
+                self.get_price_in_token(token_id, price_in_cru)
+            }
         }
     }
 
@@ -201,6 +232,10 @@ pub trait StorageOrder {
 
     fn get_random_node(&self) -> ManagedAddress {
         let nodes = &self.order_nodes();
+        require!(
+            nodes.len() > 0,
+            "No nodes to choose"
+        );
         let mut rand_source = RandomnessSource::<Self::Api>::new();
         let rand_index = rand_source.next_usize_in_range(0, nodes.len());
         let mut iter = nodes.iter();
@@ -208,6 +243,50 @@ pub trait StorageOrder {
             iter.next();
         }
         iter.next().unwrap()
+    }
+
+    fn get_price_in_token(
+        &self,
+        token_id: TokenIdentifier,
+        cru_amount: BigUint,
+    ) -> BigUint {
+        let router_address = self.router_contract_address().get();
+        let cru_token_id = self.cru_token_id().get();
+        let wegld_token_id = self.wegld_token_id().get();
+        let token_cru_pair_address = self.router_contract_proxy(router_address.clone())
+            .get_pair(token_id.clone(), cru_token_id.clone())
+            .execute_on_dest_context();
+
+        if !token_cru_pair_address.is_zero() {
+            self.pair_contract_proxy(token_cru_pair_address)
+                .get_amount_in_view(cru_token_id, cru_amount)
+                .execute_on_dest_context()
+        } else {
+            let unit_amount = BigUint::zero() + 1000000000000u64;
+            let egld_cru_pair_address = self.router_contract_proxy(router_address.clone())
+                .get_pair(wegld_token_id.clone(), cru_token_id.clone())
+                .execute_on_dest_context();
+            require!(
+                !egld_cru_pair_address.is_zero(),
+                "Get egld cru swap pair failed"
+            );
+            let unit_cru_in_egld = self.pair_contract_proxy(egld_cru_pair_address)
+                .get_amount_in_view(cru_token_id.clone(), unit_amount.clone())
+                .execute_on_dest_context();
+
+            let egld_token_pair_address = self.router_contract_proxy(router_address.clone())
+                .get_pair(wegld_token_id.clone(), token_id.clone())
+                .execute_on_dest_context();
+            require!(
+                !egld_token_pair_address.is_zero(),
+                "Get egld token swap pair failed"
+            );
+            let unit_token_in_egld = self.pair_contract_proxy(egld_token_pair_address)
+                .get_amount_in_view(token_id.clone(), unit_amount.clone())
+                .execute_on_dest_context();
+
+            cru_amount.mul(unit_cru_in_egld).div(unit_token_in_egld)
+        }
     }
 
     fn emit_place_order_event(
@@ -271,4 +350,8 @@ pub trait StorageOrder {
     #[view(getCruTokenId)]
     #[storage_mapper("cruTokenId")]
     fn cru_token_id(&self) -> SingleValueMapper<TokenIdentifier>;
+
+    #[view(getWegldTokenId)]
+    #[storage_mapper("wegldTokenId")]
+    fn wegld_token_id(&self) -> SingleValueMapper<TokenIdentifier>;
 }
