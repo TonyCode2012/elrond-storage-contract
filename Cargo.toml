@@ -23,7 +23,3 @@ optional = true
 
 [dev-dependencies.elrond-wasm-debug]
 version = "0.29.3"
-
-[dependencies]
-router = { git = "https://github.com/ElrondNetwork/sc-dex-rs", tag = "v1.6.0" }
-pair = { git = "https://github.com/ElrondNetwork/sc-dex-rs", tag = "v1.6.0" }

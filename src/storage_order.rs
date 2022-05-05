@@ -35,8 +35,9 @@ pub struct PlaceOrderEvent<M: ManagedTypeApi> {
     caller: ManagedAddress<M>,
     node: ManagedAddress<M>,
     cid: ManagedBuffer<M>,
-    size: u64,
+    token: TokenIdentifier<M>,
     price: BigUint<M>,
+    size: u64,
 }
 
 #[elrond_wasm::contract]
@@ -194,8 +195,16 @@ pub trait StorageOrder {
         cid: ManagedBuffer,
         size: u64,
     ) -> SCResult<()> {
+        let mut real_payment_token = payment_token;
+        let mut real_payment_amount = payment_amount;
+        let payments = self.call_value().all_esdt_transfers();
+        if payments.len() > 0 {
+            let real_payments = payments.get(0);
+            real_payment_token = real_payments.token_identifier.clone();
+            real_payment_amount = real_payments.amount.clone();
+        }
         require!(
-            self.supported_tokens().contains(&payment_token),
+            self.supported_tokens().contains(&real_payment_token),
             "Unsupported token to pay"
         );
         require!(
@@ -203,24 +212,25 @@ pub trait StorageOrder {
             "Unsupported node to order"
         );
 
-        let price = self.get_price(payment_token.clone(), size);
+        let price = self.get_price(real_payment_token.clone(), size);
         require!(
-            payment_amount >= price.clone(),
-            "No enough token to order"
+            real_payment_amount >= price.clone(),
+            "Payment amount less than price, please get price again"
         );
 
-        self.send().direct(&node_address, &payment_token, 0, &price, b"order successfully");
+        self.send().direct(&node_address, &real_payment_token, 0, &price, b"order successfully");
 
         let caller = self.blockchain().get_caller();
-        if payment_amount > price.clone() {
-            let change = &payment_amount - &price;
-            self.send().direct(&caller, &payment_token, 0, &change, b"refund change");
+        if real_payment_amount > price.clone() {
+            let change = &real_payment_amount - &price;
+            self.send().direct(&caller, &real_payment_token, 0, &change, b"refund change");
         }
 
         self.emit_place_order_event(
             &caller,
             &node_address,
             &cid,
+            &real_payment_token,
             &price,
             size,
         );
@@ -294,6 +304,7 @@ pub trait StorageOrder {
         caller: &ManagedAddress,
         node: &ManagedAddress,
         cid: &ManagedBuffer,
+        token: &TokenIdentifier,
         price: &BigUint,
         size: u64,
     ) {
@@ -305,8 +316,9 @@ pub trait StorageOrder {
                 caller: caller.clone(),
                 node: node.clone(),
                 cid: cid.clone(),
-                size: size,
+                token: token.clone(),
                 price: price.clone(),
+                size: size,
             },
         )
     }

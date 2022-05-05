@@ -17,6 +17,7 @@ elrond_wasm_node::wasm_endpoints! {
         getPrice
         getRouterContractAddress
         getSupportedTokens
+        getWegldTokenId
         placeOrder
         placeOrderWithNode
         removeOrderNode
