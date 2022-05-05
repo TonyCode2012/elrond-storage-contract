@@ -1,0 +1,24 @@
+{
+    "configurations": {
+        "default": {
+            "proxy": "https://gateway.elrond.com",
+            "chainID": "1"
+        }
+    },
+    "contract": {
+        "deploy": {
+            "verbose": true,
+            "bytecode": "output/storage-order.wasm",
+            "recall-nonce": true,
+            "pem": "<path_to_your_wallet_pem>",
+            "gas-limit": 60000000,
+            "arguments": [
+                "str:CRU-a5f4aa",
+                "str:WEGLD-bd4d79",
+                "erd1qqqqqqqqqqqqqpgqq66xk9gfr4esuhem3jru86wg5hvp33a62jps2fy57p"
+            ],
+            "send": true,
+            "outfile": "deploy.interaction.json"
+        }
+    }
+}
