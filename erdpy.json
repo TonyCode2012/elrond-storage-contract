@@ -11,7 +11,7 @@
             "bytecode": "output/storage-order.wasm",
             "recall-nonce": true,
             "pem": "<path_to_your_wallet_pem>",
-            "gas-limit": 60000000,
+            "gas-limit": 100000000,
             "arguments": [
                 "str:CRU-a5f4aa",
                 "str:WEGLD-bd4d79",

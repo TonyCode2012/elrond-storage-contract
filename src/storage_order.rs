@@ -262,7 +262,6 @@ pub trait StorageOrder {
     ) -> BigUint {
         let router_address = self.router_contract_address().get();
         let cru_token_id = self.cru_token_id().get();
-        let wegld_token_id = self.wegld_token_id().get();
         let token_cru_pair_address = self.router_contract_proxy(router_address.clone())
             .get_pair(token_id.clone(), cru_token_id.clone())
             .execute_on_dest_context();
@@ -273,6 +272,7 @@ pub trait StorageOrder {
                 .execute_on_dest_context()
         } else {
             let unit_amount = BigUint::zero() + 1000000000000u64;
+            let wegld_token_id = self.wegld_token_id().get();
             let egld_cru_pair_address = self.router_contract_proxy(router_address.clone())
                 .get_pair(wegld_token_id.clone(), cru_token_id.clone())
                 .execute_on_dest_context();

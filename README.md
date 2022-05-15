@@ -4,7 +4,7 @@ StorageOrder contract allows users to place a storage order on Elrond Network wi
 
 ## Deployment
 
-Run ***erdpy contract build*** in project root directory to build project.
+Run ***erdpy contract build*** in project root directory to build contract.
 
 Configure erdpy.json in project root directory, which looks like:
 ```
@@ -33,7 +33,7 @@ Configure erdpy.json in project root directory, which looks like:
     }
 }
 ```
-Note: Use the default value while the pem must be configured to real wallet pem file path.
+Note: Use the default value except the pem should be configured to real wallet pem file path.
 
 Run ***erdpy contract deploy*** to deploy contract. Then check result on [elrond explorer](https://explorer.elrond.com/) under account.
 
@@ -45,7 +45,7 @@ Note: these operations can only be called by contract owner.
 ### Set order price
 
 ```
-erdpy --verbose contract call <contract_address> --recall-nonce --pem="<path_to_wallet_pem>" --chain="1" --gas-limit="60000000" --function="setOrderPrice" --arguments <base_price> <byte_price> <chain_status_price> --send
+erdpy --verbose contract call <contract_address> --recall-nonce --pem="<path_to_wallet_pem>" --chain="1" --gas-limit="60000000" --function="setOrderPrice" --arguments <base_price> <byte_price> <chain_state_price> --send
 ```
 
 ### Add supported token
